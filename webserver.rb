@@ -3,6 +3,7 @@ require 'json'
 require 'open3'
 require 'tempfile'
 require 'logger'
+require 'timeout'
 
 class Server < WEBrick::HTTPServlet::AbstractServlet
   # Define a global command timeout in seconds
@@ -35,7 +36,9 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
 
   def execute_command(command, response)
     begin
-      stdout, stderr, status = Open3.capture3(command, binmode: true, timeout: COMMAND_TIMEOUT)
+      stdout, stderr, status = Timeout::timeout(COMMAND_TIMEOUT) {
+        Open3.capture3(command, binmode: true)
+      }
       format_response(stdout, stderr, status, response)
     rescue Timeout::Error
       format_timeout_response(response)
