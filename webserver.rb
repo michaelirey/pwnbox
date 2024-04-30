@@ -34,24 +34,30 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
 
   def execute_command(command, response)
     begin
-      pid = Process.spawn(command, out: :out, err: :err)
+      out_file = Tempfile.new('stdout')
+      err_file = Tempfile.new('stderr')
+      pid = Process.spawn(command, out: out_file, err: err_file)
       Timeout.timeout(COMMAND_TIMEOUT) do
         Process.wait(pid)
       end
-      stdout = File.read('out')
-      stderr = File.read('err')
+      out_file.rewind
+      err_file.rewind
+      stdout = out_file.read
+      stderr = err_file.read
       exit_code = $?.exitstatus
       format_response(stdout, stderr, exit_code, response)
     rescue Timeout::Error
-      Process.kill('TERM', pid) # attempt to terminate gracefully
+      Process.kill('TERM', pid)
       Process.wait(pid)
       format_timeout_response(response)
     rescue => e
       @logger.error "Exception caught: #{e.message}"
       format_error_response(e, response)
     ensure
-      File.delete('out') if File.exist?('out')
-      File.delete('err') if File.exist?('err')
+      out_file.close
+      out_file.unlink
+      err_file.close
+      err_file.unlink
     end
   end
 
