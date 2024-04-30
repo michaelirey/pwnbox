@@ -2,8 +2,12 @@ require 'webrick'
 require 'json'
 require 'open3'
 require 'tempfile'
+require 'timeout'
 
 class Server < WEBrick::HTTPServlet::AbstractServlet
+  # Define a global command timeout in seconds
+  COMMAND_TIMEOUT = 60
+
   def do_POST(request, response)
     route = request.path
 
@@ -24,8 +28,14 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
   private
 
   def execute_command(command, response)
-    stdout, stderr, status = Open3.capture3(command, binmode: true)
-    format_response(stdout, stderr, status, response)
+    begin
+      stdout, stderr, status = Timeout::timeout(COMMAND_TIMEOUT) {
+        Open3.capture3(command, binmode: true)
+      }
+      format_response(stdout, stderr, status, response)
+    rescue Timeout::Error
+      format_timeout_response(response)
+    end
   end
 
   def execute_script(request, response)
@@ -38,18 +48,28 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
       file.close
 
       command = "#{execute_with} #{file.path}"
-      stdout, stderr, status = Open3.capture3(command, binmode: true)
-      format_response(stdout, stderr, status, response)
+      execute_command(command, response)
     end
   end
 
   def format_response(stdout, stderr, status, response)
-    response_dict = if status.success?
-                      { 'stdout' => stdout, 'stderr' => stderr, 'exit_code' => status.exitstatus }
-                    else
-                      { 'stdout' => '', 'stderr' => 'Command did not exit normally or failed.', 'exit_code' => status.exitstatus || -1 }
-                    end
+    response_dict = {
+      'stdout' => stdout,
+      'stderr' => stderr,
+      'exit_code' => status.exitstatus || -1
+    }
 
+    response.status = 200
+    response['Content-Type'] = 'application/json'
+    response.body = JSON.generate(response_dict)
+  end
+
+  def format_timeout_response(response)
+    response_dict = {
+      'stdout' => '',
+      'stderr' => 'Command timed out.',
+      'exit_code' => -1
+    }
     response.status = 200
     response['Content-Type'] = 'application/json'
     response.body = JSON.generate(response_dict)
