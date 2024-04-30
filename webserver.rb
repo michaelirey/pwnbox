@@ -2,10 +2,17 @@ require 'webrick'
 require 'json'
 require 'open3'
 require 'tempfile'
+require 'logger'
 
 class Server < WEBrick::HTTPServlet::AbstractServlet
   # Define a global command timeout in seconds
   COMMAND_TIMEOUT = 60
+
+  # Initialize Logger
+  def initialize(server)
+    super
+    @logger = Logger.new(STDOUT)
+  end
 
   def do_POST(request, response)
     route = request.path
@@ -33,6 +40,7 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
     rescue Timeout::Error
       format_timeout_response(response)
     rescue => e
+      @logger.error "Exception caught: #{e.message}"
       format_error_response(e, response)
     end
   end
