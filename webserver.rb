@@ -1,9 +1,7 @@
 require 'webrick'
 require 'json'
-require 'open3'
 require 'tempfile'
 require 'logger'
-require 'timeout'
 
 class Server < WEBrick::HTTPServlet::AbstractServlet
   # Define a global command timeout in seconds
@@ -36,15 +34,24 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
 
   def execute_command(command, response)
     begin
-      stdout, stderr, status = Timeout::timeout(COMMAND_TIMEOUT) {
-        Open3.capture3(command, binmode: true)
-      }
-      format_response(stdout, stderr, status, response)
+      pid = Process.spawn(command, out: :out, err: :err)
+      Timeout.timeout(COMMAND_TIMEOUT) do
+        Process.wait(pid)
+      end
+      stdout = File.read('out')
+      stderr = File.read('err')
+      exit_code = $?.exitstatus
+      format_response(stdout, stderr, exit_code, response)
     rescue Timeout::Error
+      Process.kill('TERM', pid) # attempt to terminate gracefully
+      Process.wait(pid)
       format_timeout_response(response)
     rescue => e
       @logger.error "Exception caught: #{e.message}"
       format_error_response(e, response)
+    ensure
+      File.delete('out') if File.exist?('out')
+      File.delete('err') if File.exist?('err')
     end
   end
 
@@ -62,11 +69,11 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
     end
   end
 
-  def format_response(stdout, stderr, status, response)
+  def format_response(stdout, stderr, exit_code, response)
     response_dict = {
       'stdout' => stdout,
       'stderr' => stderr,
-      'exit_code' => status.exitstatus || -1
+      'exit_code' => exit_code || -1
     }
 
     response.status = 200
