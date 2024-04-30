@@ -30,7 +30,7 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
     begin
       stdout, stderr, status = Open3.capture3(command, binmode: true, timeout: COMMAND_TIMEOUT)
       format_response(stdout, stderr, status, response)
-    rescue Open3::TimeoutError
+    rescue Timeout::Error
       format_timeout_response(response)
     rescue => e
       format_error_response(e, response)
