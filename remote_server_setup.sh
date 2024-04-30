@@ -24,5 +24,3 @@ curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc \
 ngrok config add-authtoken ${NGROK_AUTH_TOKEN}
 
 ngrok http http://localhost:8000
-
-

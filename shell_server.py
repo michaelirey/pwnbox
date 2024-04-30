@@ -8,7 +8,7 @@ class CommandHandler(BaseHTTPRequestHandler):
         post_data = self.rfile.read(content_length).decode('utf-8')  # Read the data sent by POST
         
         # Define a command timeout in seconds
-        command_timeout = 120  # Timeout after 30 seconds
+        command_timeout = 60 # Timeout after 30 seconds
 
         # Execute the received command securely with a timeout
         try:
