@@ -10,14 +10,14 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
   # Initialize Logger
   def initialize(server)
     super
-    # Logger now logs to both STDOUT and a file
     @logger = Logger.new('server_log.log', 10, 1024000)
     @logger.formatter = proc do |severity, datetime, progname, msg|
       "#{datetime}: #{severity} - #{msg}\n"
     end
     @logger.info "Server started"
+    @blacklist = load_blacklist
   end
-
+  
   def do_POST(request, response)
     route = request.path
 
@@ -38,6 +38,15 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
   private
 
   def execute_command(command, response)
+    if command_blacklisted?(command)
+        log_command_execution(command, true)
+        response.status = 403
+        response.body = 'Forbidden: Command is blacklisted'
+        return
+      end
+    
+      log_command_execution(command, false)
+
     begin
       out_file = Tempfile.new('stdout')
       err_file = Tempfile.new('stderr')
@@ -93,6 +102,18 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
     response.body = JSON.generate(response_dict)
   end
 
+  def format_blacklist_response(command, response)
+    response_dict = {
+      'attempted_command' => command,
+      'server_error' => "Command not allowed and is blacklisted.",
+      'status' => 'fail',
+      'suggestion' => "This may indicate the command is awaiting input, which is unsupported in this environment. Consider automating any required inputs or modifying the command to ensure it completes more rapidly or try scripting a solution. Otherwise, trying adjusting your command so it completes in a more timely manner."
+    }
+    response.status = 403
+    response['Content-Type'] = 'application/json'
+    response.body = JSON.generate(response_dict)
+  end
+
   def format_timeout_response(response, command)
     response_dict = {
       'attempted_command' => command,
@@ -115,6 +136,26 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
     response['Content-Type'] = 'application/json'
     response.body = JSON.generate(response_dict)
   end
+
+  def load_blacklist
+    blacklist_path = 'blacklist.txt'
+    File.exist?(blacklist_path) ? File.readlines(blacklist_path).map(&:strip) : []
+  end
+  
+  def command_blacklisted?(command)
+    # Remove IP addresses (if any) and other numeric parameters for a more generalized match
+    sanitized_command = command.gsub(/\b\d+\b/, '').strip
+    @blacklist.any? { |bl_command| sanitized_command.include?(bl_command) }
+  end
+
+  def log_command_execution(command, blacklisted)
+    if blacklisted
+      @logger.warn "Blocked blacklisted command: #{command}"
+    else
+      @logger.info "Executing command: #{command}"
+    end
+  end
+  
 end
 
 server = WEBrick::HTTPServer.new(Port: 8000)

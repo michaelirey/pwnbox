@@ -1,0 +1,3 @@
+telnet 
+telnet  23
+telnet-ssl  23
