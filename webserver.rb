@@ -74,20 +74,18 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
       @logger.info "Cache miss: #{cache_path}"
     end
   
-    begin
-      stdout_file_path = "stdout_#{md5_hash}"
-      stderr_file_path = "stderr_#{md5_hash}"
-      out_file = Tempfile.new(['stdout', '.txt'])
-      err_file = Tempfile.new(['stderr', '.txt'])
+    stdout_file_path = "stdout_#{md5_hash}"
+    stderr_file_path = "stderr_#{md5_hash}"
   
-      # Modify the spawn command to use 'tee' for stdout and stderr
-      pid = Process.spawn("#{command} 1> >(tee #{stdout_file_path}) 2> >(tee #{stderr_file_path})", out: out_file.path, err: err_file.path)
+    begin
+      # Execute command using shell with tee for stdout and stderr
+      command_with_tee = "sh -c '#{command} 1> >(tee #{stdout_file_path}) 2> >(tee #{stderr_file_path})'"
+      pid = Process.spawn(command_with_tee, out: :out, err: :err)
   
       Timeout.timeout(COMMAND_TIMEOUT) do
         Process.wait(pid)
       end
   
-      # Reading the output from tee redirected files
       stdout = File.read(stdout_file_path)
       stderr = File.read(stderr_file_path)
       exit_code = $?.exitstatus
@@ -107,15 +105,12 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
       @logger.error "Exception caught: #{e.message}"
       format_error_response(e, response)
     ensure
-      out_file.close
-      out_file.unlink
-      err_file.close
-      err_file.unlink
+      # Ensure temporary files are deleted
       File.delete(stdout_file_path) if File.exist?(stdout_file_path)
       File.delete(stderr_file_path) if File.exist?(stderr_file_path)
     end
   end
-            
+              
   def execute_script(request, response)
     request_body = JSON.parse(request.body)
     file_contents = request_body['file_contents']
