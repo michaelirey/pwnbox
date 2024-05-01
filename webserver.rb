@@ -2,12 +2,16 @@ require 'webrick'
 require 'json'
 require 'tempfile'
 require 'logger'
+require 'fileutils'
+require 'base64'
+require 'base64'
+require 'digest/md5'
+
 
 class Server < WEBrick::HTTPServlet::AbstractServlet
   # Define a global command timeout in seconds
   COMMAND_TIMEOUT = 60
 
-  # Initialize Logger
   def initialize(server)
     super
     @logger = Logger.new('server_log.log', 10, 1024000)
@@ -16,6 +20,9 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
     end
     @logger.info "Server started"
     @blacklist = load_blacklist
+  
+    # Ensure command cache directory exists
+    FileUtils.mkdir_p('command_cache')
   end
   
   def do_POST(request, response)
@@ -37,16 +44,33 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
 
   private
 
+  require 'base64'
+  require 'digest/md5'
+  
   def execute_command(command, response)
     if command_blacklisted?(command)
-        log_command_execution(command, true)
-        response.status = 403
-        response.body = 'Forbidden: Command is blacklisted'
+      log_command_execution(command, true)
+      format_blacklist_response(command, response)
+      return
+    end
+  
+    log_command_execution(command, false)
+  
+    # Use MD5 hash of the command as the cache key
+    md5_hash = Digest::MD5.hexdigest(command)
+    cache_path = File.join('command_cache', md5_hash)
+  
+    # Check if the response is cached
+    if File.exist?(cache_path)
+      cached_data = File.read(cache_path).split("\n", 2)
+      if cached_data.size == 2
+        response.body = Base64.decode64(cached_data[1])
+        response.status = 200
+        response['Content-Type'] = 'application/json'
         return
       end
-    
-      log_command_execution(command, false)
-
+    end
+  
     begin
       out_file = Tempfile.new('stdout')
       err_file = Tempfile.new('stderr')
@@ -60,10 +84,15 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
       stderr = err_file.read
       exit_code = $?.exitstatus
       format_response(stdout, stderr, exit_code, response)
+  
+      # Cache the response if it's successful
+      if response.status == 200
+        cache_content = Base64.encode64(command) + "\n" + Base64.encode64(response.body)
+        File.write(cache_path, cache_content)
+      end
     rescue Timeout::Error
       Process.kill('TERM', pid)
       Process.wait(pid)
-      @logger.error "Command execution timed out after #{COMMAND_TIMEOUT} seconds. This may indicate the command is awaiting input, which is unsupported in this environment. Consider automating any required inputs or modifying the command to ensure it completes more rapidly. Try scripting a solution. Otherwis,e trying changing your command to it wont take so long to execute. Executed command: #{command}"
       format_timeout_response(response, command)
     rescue => e
       @logger.error "Exception caught: #{e.message}"
@@ -75,7 +104,7 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
       err_file.unlink
     end
   end
-
+    
   def execute_script(request, response)
     request_body = JSON.parse(request.body)
     file_contents = request_body['file_contents']
