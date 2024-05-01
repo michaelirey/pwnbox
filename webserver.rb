@@ -143,10 +143,21 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
   end
   
   def command_blacklisted?(command)
-    # Remove IP addresses (if any) and other numeric parameters for a more generalized match
-    sanitized_command = command.gsub(/\b\d+\b/, '').strip
-    @blacklist.any? { |bl_command| sanitized_command.include?(bl_command) }
+    # Sanitize the command by removing outputs piped from it
+    sanitized_command = command.gsub(/<<.*$/, '').strip
+  
+    # Split the command into parts for structured matching
+    command_parts = sanitized_command.split
+  
+    # Iterate over each blacklisted command pattern
+    @blacklist.any? do |bl_command|
+      bl_parts = bl_command.split
+      # Check if the initial parts of the command match the blacklisted command parts
+      next false if bl_parts.size > command_parts.size
+      bl_parts.each_with_index.all? { |part, index| part == command_parts[index] }
+    end
   end
+  
 
   def log_command_execution(command, blacklisted)
     if blacklisted
