@@ -94,6 +94,9 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
   
       # Cache the response if it's successful
       if response.status == 200
+        @logger.info "Saving command cache command: #{command}"
+        @logger.info "Saving cache in: #{cache_path}"
+
         cache_content = Base64.encode64(command) + "\n" + Base64.encode64(response.body)
         File.write(cache_path, cache_content)
       end
