@@ -10,7 +10,12 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
   # Initialize Logger
   def initialize(server)
     super
-    @logger = Logger.new(STDOUT)
+    # Logger now logs to both STDOUT and a file
+    @logger = Logger.new('server_log.log', 10, 1024000)
+    @logger.formatter = proc do |severity, datetime, progname, msg|
+      "#{datetime}: #{severity} - #{msg}\n"
+    end
+    @logger.info "Server started"
   end
 
   def do_POST(request, response)
@@ -49,6 +54,7 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
     rescue Timeout::Error
       Process.kill('TERM', pid)
       Process.wait(pid)
+      @logger.error "Command timed out: #{command}"
       format_timeout_response(response)
     rescue => e
       @logger.error "Exception caught: #{e.message}"
