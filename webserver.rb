@@ -61,23 +61,29 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
 
     # Check if the response is cached
     if File.exist?(cache_path)
-        @logger.info "Cache for response found: #{cache_path}"
-        cached_data = File.read(cache_path).split("\n", 2)
+      @logger.info "Cache for response found: #{cache_path}"
+      cached_data = File.read(cache_path).split("\n", 2)
       if cached_data.size == 2
         @logger.info "Decoding cache response: #{cache_path}"
-        # Decode the cached response and immediately return it
-        response.body = Base64.decode64(cached_data[1])
-        response.status = 200
-        response['Content-Type'] = 'application/json'
+        # Decode the cached response which is expected to be in JSON format
+        cached_response_json = Base64.decode64(cached_data[1])
+        cached_response = JSON.parse(cached_response_json)
+
+        # Extract components from the parsed JSON
+        stdout = cached_response['stdout'] || ""
+        stderr = cached_response['stderr'] || ""
+        exit_code = cached_response['exit_code'] || -1
+
         @logger.info "Returning cached response for command: #{command}"
-        return  # This stops processing and returns the cached response
+        # Pass the decoded and parsed data to format_response
+        return format_response(stdout, stderr, exit_code, response)
       else
         @logger.info "Cache was found but not decoded: #{cache_path}"
       end
     else
       @logger.info "Cache for response NOT found: #{cache_path}"
     end
-  
+
     begin
       out_file = Tempfile.new('stdout')
       err_file = Tempfile.new('stderr')
