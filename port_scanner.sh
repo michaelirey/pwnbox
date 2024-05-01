@@ -15,23 +15,22 @@ results_file="nmap_results_$target.txt"
 # Confirm the target
 echo "### An initial basic port scan of the $target"
 
-
 # Perform a quick ping test
-echo -e "\nPerform a quick ping test"
+echo -e "\n#### Perform a quick ping test"
 echo "\`\`\`"
 echo "% ping -c 10 $target"
 ping -c 10 $target
 echo "\`\`\`"
 
 # Perform traceroute
-echo -e "\nPerform traceroute"
+echo -e "\n#### Perform traceroute"
 echo "\`\`\`"
 echo "% traceroute $target"
 traceroute $target
 echo "\`\`\`"
 
 # Perform Nmap version scan with no ping (to ensure scan runs even if host blocks pings)
-echo -e "\nPerform Nmap version scan with no ping (to ensure scan runs even if host blocks pings)"
+echo -e "\n#### Perform Nmap version scan with no ping (to ensure scan runs even if host blocks pings)"
 echo "\`\`\`"
 echo "% nmap -sV -Pn $target"
 nmap -sV -Pn $target | tee "$results_file"
