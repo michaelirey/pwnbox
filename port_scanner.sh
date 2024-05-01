@@ -14,19 +14,29 @@ target=$1
 results_file="nmap_results_$target.txt"
 
 # Confirm the target
-echo "The script will perform various network scans on the target: $target"
+echo "### An initial basic port scan of the $target"
+
 
 # Perform a quick ping test
+echo "Perform a quick ping test"
+echo "\`\`\`"
 echo "% ping -c 10 $target"
 ping -c 10 $target
+echo "\`\`\`"
 
 # Perform traceroute
+echo "Perform traceroute"
+echo "\`\`\`"
 echo "% traceroute $target"
 traceroute $target
+echo "\`\`\`"
 
 # Perform Nmap version scan with no ping (to ensure scan runs even if host blocks pings)
+echo "Perform Nmap version scan with no ping (to ensure scan runs even if host blocks pings)"
+echo "\`\`\`"
 echo "% nmap -sV -Pn $target"
 nmap -sV -Pn $target | tee "$results_file"
+echo "\`\`\`"
 
 # # Extract and display open ports from the results
 # open_ports=$(grep -oP '^\d+/tcp\s+open' "$results_file" | awk '{ print $1 }' | sort -u)
