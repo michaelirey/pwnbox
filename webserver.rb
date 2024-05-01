@@ -54,8 +54,8 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
     rescue Timeout::Error
       Process.kill('TERM', pid)
       Process.wait(pid)
-      @logger.error "Command timed out: #{command}"
-      format_timeout_response(response)
+      @logger.error "Command execution timed out after #{COMMAND_TIMEOUT} seconds. This may indicate the command is awaiting input, which is unsupported in this environment. Consider automating any required inputs or modifying the command to ensure it completes more rapidly. Try scripting a solution. Otherwis,e trying changing your command to it wont take so long to execute. Executed command: #{command}"
+      format_timeout_response(response, command)
     rescue => e
       @logger.error "Exception caught: #{e.message}"
       format_error_response(e, response)
@@ -93,11 +93,12 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
     response.body = JSON.generate(response_dict)
   end
 
-  def format_timeout_response(response)
+  def format_timeout_response(response, command)
     response_dict = {
-      'stdout' => '',
-      'stderr' => 'Command timed out.',
-      'exit_code' => -1
+      'attempted_command' => command,
+      'server_error' => "Command execution timed out after #{COMMAND_TIMEOUT} seconds.",
+      'status' => 'fail',
+      'suggestion' => "This may indicate the command is awaiting input, which is unsupported in this environment. Consider automating any required inputs or modifying the command to ensure it completes more rapidly or try scripting a solution. Otherwise, trying adjusting your command so it completes in a more timely manner."
     }
     response.status = 200
     response['Content-Type'] = 'application/json'
