@@ -16,7 +16,7 @@ hostname=$(hostname)
 package_managers=$(echo $(which apt yum dnf 2>/dev/null))
 
 # List of scripting language interpreters to check
-languages=("python" "ruby" "perl" "php" "node" "lua")
+languages=("python" "ruby" "perl" "php" "node")
 
 # Function to get version information
 get_version() {
