@@ -17,36 +17,43 @@ results_file="nmap_results_$target.txt"
 echo "The script will perform various network scans on the target: $target"
 
 # Perform a quick ping test
-echo "Performing ping test..."
-time ping -c 10 $target
+echo "% ping -c 10 $target"
+ping -c 10 $target
 
 # Perform traceroute
-echo "Performing traceroute..."
-time traceroute $target
+echo "% traceroute $target"
+traceroute $target
 
 # Perform Nmap version scan with no ping (to ensure scan runs even if host blocks pings)
-echo "Performing Nmap service version scan..."
-time nmap -sV -Pn $target | tee "$results_file"
+echo "% nmap -sV -Pn $target"
+nmap -sV -Pn $target | tee "$results_file"
 
-# Extract and display open ports from the results
-echo "Checking for open ports:"
-open_ports=$(grep -oP '^\d+/tcp\s+open' "$results_file" | awk '{ print $1 }' | sort -u)
+# # Extract and display open ports from the results
+# open_ports=$(grep -oP '^\d+/tcp\s+open' "$results_file" | awk '{ print $1 }' | sort -u)
 
-if [ -z "$open_ports" ]; then
-    echo "No open ports found. Performing a comprehensive port scan..."
-    nmap -p- -sV -Pn $target | tee -a "$results_file"
-else
-    echo "Open ports found:"
-    echo "$open_ports"
-fi
+# if [ -z "$open_ports" ]; then
+#     echo "No open ports found!"
+# else
+#     echo "Open ports found:"
+#     echo "$open_ports"
+# fi
 
-if [ -z "$open_ports" ]; then
-    echo "No open ports found. Performing a comprehensive port scan..."
-    nmap -p- --min-rate=1000 -sV $target | tee -a "$results_file"
-else
-    echo "Open ports found:"
-    echo "$open_ports"
-fi
+
+# if [ -z "$open_ports" ]; then
+#     echo "No open ports found. Performing a comprehensive port scan..."
+#     nmap -p- -sV -Pn $target | tee -a "$results_file"
+# else
+#     echo "Open ports found:"
+#     echo "$open_ports"
+# fi
+
+# if [ -z "$open_ports" ]; then
+#     echo "No open ports found. Performing a comprehensive port scan..."
+#     nmap -p- --min-rate=1000 -sV $target | tee -a "$results_file"
+# else
+#     echo "Open ports found:"
+#     echo "$open_ports"
+# fi
 
 
 #Port 135 TCP : https://www.speedguide.net/port.php?port=135
