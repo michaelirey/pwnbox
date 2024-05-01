@@ -4,7 +4,7 @@
 os_info=$(cat /etc/os-release | grep PRETTY_NAME | cut -d '=' -f2)
 
 # Local IP
-local_ip=$(hostname -I | awk '{print $1}')
+local_ip=$(hostname -I | awk '{for (i=1; i<=NF; i++) if ($i ~ /^(10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|192\.168\.)/) {print $i; exit}}')
 
 # Public IP
 public_ip=$(curl -s https://ifconfig.me)
