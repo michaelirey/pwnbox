@@ -1,3 +1,4 @@
+# This file contains commands that require input or will likely timeout.
 telnet 
 telnet  23
 telnet-ssl  23
