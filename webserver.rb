@@ -81,23 +81,30 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
   
     begin
       # Use shell to handle redirection
-      full_command = "bash -c \"#{command} 1> #{stdout_file_path} 2> #{stderr_file_path}\""
-      pid = Process.spawn(full_command)
+      full_command = "#{command} | tee #{stdout_file_path}"
+      pid = Process.spawn(full_command, out: out_file, err: err_file)
       Timeout.timeout(COMMAND_TIMEOUT) do
         Process.wait(pid)
       end
   
-      stdout = File.read(stdout_file_path)
-      stderr = File.read(stderr_file_path)
+      out_file.rewind
+      err_file.rewind
+      stdout = out_file.read
+      stderr = err_file.read
       exit_code = $?.exitstatus
-  
+
       format_response(stdout, stderr, exit_code, response)
   
       if response.status == 200
-        cache_content = Base64.encode64(JSON.generate({'stdout' => stdout, 'stderr' => stderr, 'exit_code' => exit_code}))
+        @logger.info "Saving command cache command: #{command}"
+        @logger.info "Saving cache in: #{cache_path}"
+
+        cache_content = Base64.encode64(command) + "\n" + Base64.encode64(response.body)
         File.write(cache_path, cache_content)
       end
     rescue Timeout::Error
+      Process.kill('TERM', pid)
+      Process.wait(pid)
       @logger.warn "Command timeout: #{command}"
       stdout = File.read(stdout_file_path) rescue ""
       stderr = File.read(stderr_file_path) rescue ""
