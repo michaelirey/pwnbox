@@ -74,14 +74,15 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
       @logger.info "Cache miss: #{cache_path}"
     end
   
-    stdout_file_path = "stdout_#{md5_hash}"
-    stderr_file_path = "stderr_#{md5_hash}"
+    stdout_file_path = "/tmp/stdout_#{md5_hash}"
+    stderr_file_path = "/tmp/stderr_#{md5_hash}"
+    File.write(stdout_file_path, "") # Ensure file is created
+    File.write(stderr_file_path, "")
   
     begin
-      # Execute command using shell with tee for stdout and stderr
-      command_with_tee = "sh -c '#{command} 1> >(tee #{stdout_file_path}) 2> >(tee #{stderr_file_path})'"
-      pid = Process.spawn(command_with_tee, out: :out, err: :err)
-  
+      # Use shell to handle redirection
+      full_command = "bash -c \"#{command} 1> #{stdout_file_path} 2> #{stderr_file_path}\""
+      pid = Process.spawn(full_command)
       Timeout.timeout(COMMAND_TIMEOUT) do
         Process.wait(pid)
       end
@@ -89,7 +90,7 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
       stdout = File.read(stdout_file_path)
       stderr = File.read(stderr_file_path)
       exit_code = $?.exitstatus
-      
+  
       format_response(stdout, stderr, exit_code, response)
   
       if response.status == 200
@@ -98,19 +99,18 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
       end
     rescue Timeout::Error
       @logger.warn "Command timeout: #{command}"
-      stdout = File.exist?(stdout_file_path) ? File.read(stdout_file_path) : ""
-      stderr = File.exist?(stderr_file_path) ? File.read(stderr_file_path) : ""
+      stdout = File.read(stdout_file_path) rescue ""
+      stderr = File.read(stderr_file_path) rescue ""
       format_timeout_response(response, command, stdout, stderr)
     rescue => e
       @logger.error "Exception caught: #{e.message}"
       format_error_response(e, response)
     ensure
-      # Ensure temporary files are deleted
       File.delete(stdout_file_path) if File.exist?(stdout_file_path)
       File.delete(stderr_file_path) if File.exist?(stderr_file_path)
     end
   end
-              
+                
   def execute_script(request, response)
     request_body = JSON.parse(request.body)
     file_contents = request_body['file_contents']
