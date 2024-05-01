@@ -52,7 +52,7 @@ echo "#### Available Package Managers"
 echo "- **Package Managers**: $package_managers"
 
 # List of scripting language interpreters to check and their versions
-echo "## Programming Languages and Details"
+echo "#### Programming Languages and Details"
 languages=("python" "ruby" "perl" "php" "node")
 for lang in "${languages[@]}"; do
     if command -v $lang &>/dev/null; then
