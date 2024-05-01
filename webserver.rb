@@ -67,7 +67,7 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
 
         # Decoding and parsing inside a begin-rescue block
         begin
-          cached_response_json = Base64.decode64(cached_data)
+          cached_response_json = Base64.decode64(cached_data[1])
           cached_response = JSON.parse(cached_response_json)
         rescue JSON::ParserError => e
           @logger.error "Failed to parse JSON from cache: #{e.message}"
