@@ -4,7 +4,6 @@ require 'tempfile'
 require 'logger'
 require 'fileutils'
 require 'base64'
-require 'base64'
 require 'digest/md5'
 
 
@@ -65,9 +64,16 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
       cached_data = File.read(cache_path).split("\n", 2)
       if cached_data.size == 2
         @logger.info "Decoding cache response: #{cache_path}"
-        # Decode the cached response which is expected to be in JSON format
-        cached_response_json = Base64.decode64(cached_data[1])
-        cached_response = JSON.parse(cached_response_json)
+
+        # Decoding and parsing inside a begin-rescue block
+        begin
+          cached_response_json = Base64.decode64(cached_data)
+          cached_response = JSON.parse(cached_response_json)
+        rescue JSON::ParserError => e
+          @logger.error "Failed to parse JSON from cache: #{e.message}"
+          @logger.info "Invalid JSON content: #{cached_response_json}"
+          # Handle error, e.g., by ignoring the cache and re-executing the command
+        end
 
         # Extract components from the parsed JSON
         stdout = cached_response['stdout'] || ""
