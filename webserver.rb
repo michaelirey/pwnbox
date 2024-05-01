@@ -90,7 +90,6 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
       stdout = out_file.read
       stderr = err_file.read
       exit_code = $?.exitstatus
-      format_response(stdout, stderr, exit_code, response)
   
       # Cache the response if it's successful
       if response.status == 200
@@ -100,6 +99,9 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
         cache_content = Base64.encode64(command) + "\n" + Base64.encode64(response.body)
         File.write(cache_path, cache_content)
       end
+
+      format_response(stdout, stderr, exit_code, response)
+
     rescue Timeout::Error
       Process.kill('TERM', pid)
       Process.wait(pid)
