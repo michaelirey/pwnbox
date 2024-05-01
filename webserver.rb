@@ -43,9 +43,6 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
   end
 
   private
-
-  require 'base64'
-  require 'digest/md5'
   
   def execute_command(command, response)
     if command_blacklisted?(command)
@@ -60,15 +57,25 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
     md5_hash = Digest::MD5.hexdigest(command)
     cache_path = File.join('command_cache', md5_hash)
   
+    @logger.info "Checking cached for response: #{cache_path}"
+
     # Check if the response is cached
     if File.exist?(cache_path)
-      cached_data = File.read(cache_path).split("\n", 2)
+        @logger.info "Cache for response found: #{cache_path}"
+        cached_data = File.read(cache_path).split("\n", 2)
       if cached_data.size == 2
+        @logger.info "Decoding cache response: #{cache_path}"
+        # Decode the cached response and immediately return it
         response.body = Base64.decode64(cached_data[1])
         response.status = 200
         response['Content-Type'] = 'application/json'
-        return
+        @logger.info "Returning cached response for command: #{command}"
+        return  # This stops processing and returns the cached response
+      else
+        @logger.info "Cache was found but not decoded: #{cache_path}"
       end
+    else
+      @logger.info "Cache for response NOT found: #{cache_path}"
     end
   
     begin
@@ -104,7 +111,7 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
       err_file.unlink
     end
   end
-    
+        
   def execute_script(request, response)
     request_body = JSON.parse(request.body)
     file_contents = request_body['file_contents']
