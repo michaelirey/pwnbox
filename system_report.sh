@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "### System Report"
+echo -e "### System Report\n"
 
 # OS and Version
 os_info=$(cat /etc/os-release | grep PRETTY_NAME | cut -d '=' -f2)
