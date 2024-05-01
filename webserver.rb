@@ -52,76 +52,57 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
   
     log_command_execution(command, false)
   
-    # Use MD5 hash of the command as the cache key
     md5_hash = Digest::MD5.hexdigest(command)
     cache_path = File.join('command_cache', md5_hash)
+    
+    @logger.info "Checking cache for response: #{cache_path}"
   
-    @logger.info "Checking cached for response: #{cache_path}"
-
-    # Check if the response is cached
     if File.exist?(cache_path)
-      @logger.info "Cache for response found: #{cache_path}"
+      @logger.info "Cache hit: #{cache_path}"
       cached_data = File.read(cache_path).split("\n\n", 2)
       if cached_data.size == 2
         @logger.info "Decoding cache response: #{cache_path}"
-
-        # Decoding and parsing inside a begin-rescue block
         begin
           cached_response_json = Base64.decode64(cached_data[1])
           cached_response = JSON.parse(cached_response_json)
+          return format_response(cached_response['stdout'], cached_response['stderr'], cached_response['exit_code'], response)
         rescue JSON::ParserError => e
           @logger.error "Failed to parse JSON from cache: #{e.message}"
-          @logger.error "Failed to parse JSON cached_data: #{cached_data}"
-          @logger.error "Base64 decode part 1: #{Base64.decode64(cached_data[0])}"
-          @logger.error "Base64 decode part 2: #{Base64.decode64(cached_data[1])}"
-
-          @logger.info "Invalid JSON content: #{cached_response_json}"
-          # Handle error, e.g., by ignoring the cache and re-executing the command
         end
-
-        # Extract components from the parsed JSON
-        stdout = cached_response['stdout'] || ""
-        stderr = cached_response['stderr'] || ""
-        exit_code = cached_response['exit_code'] || -1
-
-        @logger.info "Returning cached response for command: #{command}"
-        # Pass the decoded and parsed data to format_response
-        return format_response(stdout, stderr, exit_code, response)
-      else
-        @logger.info "Cache was found but not decoded: #{cache_path}"
       end
     else
-      @logger.info "Cache for response NOT found: #{cache_path}"
+      @logger.info "Cache miss: #{cache_path}"
     end
-
+  
     begin
-      out_file = Tempfile.new('stdout')
-      err_file = Tempfile.new('stderr')
-      pid = Process.spawn(command, out: out_file, err: err_file)
+      stdout_file_path = "stdout_#{md5_hash}"
+      stderr_file_path = "stderr_#{md5_hash}"
+      out_file = Tempfile.new(['stdout', '.txt'])
+      err_file = Tempfile.new(['stderr', '.txt'])
+  
+      # Modify the spawn command to use 'tee' for stdout and stderr
+      pid = Process.spawn("#{command} 1> >(tee #{stdout_file_path}) 2> >(tee #{stderr_file_path})", out: out_file.path, err: err_file.path)
+  
       Timeout.timeout(COMMAND_TIMEOUT) do
         Process.wait(pid)
       end
-      out_file.rewind
-      err_file.rewind
-      stdout = out_file.read
-      stderr = err_file.read
-      exit_code = $?.exitstatus
   
+      # Reading the output from tee redirected files
+      stdout = File.read(stdout_file_path)
+      stderr = File.read(stderr_file_path)
+      exit_code = $?.exitstatus
+      
       format_response(stdout, stderr, exit_code, response)
-
-      # Cache the response if it's successful
+  
       if response.status == 200
-        @logger.info "Saving command cache command: #{command}"
-        @logger.info "Saving cache in: #{cache_path}"
-
-        cache_content = Base64.encode64(command) + "\n" + Base64.encode64(response.body)
+        cache_content = Base64.encode64(JSON.generate({'stdout' => stdout, 'stderr' => stderr, 'exit_code' => exit_code}))
         File.write(cache_path, cache_content)
       end
-
     rescue Timeout::Error
-      Process.kill('TERM', pid)
-      Process.wait(pid)
-      format_timeout_response(response, command)
+      @logger.warn "Command timeout: #{command}"
+      stdout = File.exist?(stdout_file_path) ? File.read(stdout_file_path) : ""
+      stderr = File.exist?(stderr_file_path) ? File.read(stderr_file_path) : ""
+      format_timeout_response(response, command, stdout, stderr)
     rescue => e
       @logger.error "Exception caught: #{e.message}"
       format_error_response(e, response)
@@ -130,9 +111,11 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
       out_file.unlink
       err_file.close
       err_file.unlink
+      File.delete(stdout_file_path) if File.exist?(stdout_file_path)
+      File.delete(stderr_file_path) if File.exist?(stderr_file_path)
     end
   end
-        
+            
   def execute_script(request, response)
     request_body = JSON.parse(request.body)
     file_contents = request_body['file_contents']
@@ -171,14 +154,17 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
     response.body = JSON.generate(response_dict)
   end
 
-  def format_timeout_response(response, command)
+  def format_timeout_response(response, command, stdout, stderr)
     response_dict = {
       'attempted_command' => command,
+      'stdout' => stdout,
+      'stderr' => stderr,
+      'exit_code' => -1,  # Indicative of a timeout
       'server_error' => "Command execution timed out after #{COMMAND_TIMEOUT} seconds.",
       'status' => 'fail',
-      'suggestion' => "This may indicate the command is awaiting input, which is unsupported in this environment. Consider automating any required inputs or modifying the command to ensure it completes more rapidly or try scripting a solution. Otherwise, trying adjusting your command so it completes in a more timely manner."
+      'suggestion' => "Consider modifying your command or increasing the timeout setting if consistently necessary."
     }
-    response.status = 200
+    response.status = 500
     response['Content-Type'] = 'application/json'
     response.body = JSON.generate(response_dict)
   end
