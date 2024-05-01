@@ -61,7 +61,7 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
     # Check if the response is cached
     if File.exist?(cache_path)
       @logger.info "Cache for response found: #{cache_path}"
-      cached_data = File.read(cache_path).split("\n", 2)
+      cached_data = File.read(cache_path).split("\n\n", 2)
       if cached_data.size == 2
         @logger.info "Decoding cache response: #{cache_path}"
 
