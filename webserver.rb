@@ -71,6 +71,10 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
           cached_response = JSON.parse(cached_response_json)
         rescue JSON::ParserError => e
           @logger.error "Failed to parse JSON from cache: #{e.message}"
+          @logger.error "Failed to parse JSON cached_data: #{cached_data}"
+          @logger.error "Base64 decode part 1: #{Base64.decode64(cached_data[0])}"
+          @logger.error "Base64 decode part 2: #{Base64.decode64(cached_data[1])}"
+
           @logger.info "Invalid JSON content: #{cached_response_json}"
           # Handle error, e.g., by ignoring the cache and re-executing the command
         end
