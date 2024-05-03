@@ -1,8 +1,8 @@
 class CommandExecutor
-  def initialize(timeout: 60)
+  def initialize(timeout:)
     @timeout = timeout
   end
-
+  
   def execute(command)
     stdout_file, stderr_file = create_temp_files(command)
     begin

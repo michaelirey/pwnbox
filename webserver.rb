@@ -60,7 +60,7 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
       return
     end
   
-    executor = CommandExecutor.new
+    executor = CommandExecutor.new(timeout: COMMAND_TIMEOUT)
     begin
       result = executor.execute(command)
       format_response(result.stdout, result.stderr, result.exit_code, response)
