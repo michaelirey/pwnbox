@@ -79,9 +79,12 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
     File.write(stdout_file_path, "") # Ensure file is created
     File.write(stderr_file_path, "")
   
+    out_file = File.open(stdout_file_path, 'w+')
+    err_file = File.open(stderr_file_path, 'w+')
+  
     begin
       # Use shell to handle redirection
-      full_command = "#{command} | tee #{stdout_file_path}"
+      full_command = "#{command} 2>&1 | tee #{stdout_file_path}"
       pid = Process.spawn(full_command, out: out_file, err: err_file)
       Timeout.timeout(COMMAND_TIMEOUT) do
         Process.wait(pid)
@@ -113,6 +116,8 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
       @logger.error "Exception caught: #{e.message}"
       format_error_response(e, response)
     ensure
+      out_file.close
+      err_file.close
       File.delete(stdout_file_path) if File.exist?(stdout_file_path)
       File.delete(stderr_file_path) if File.exist?(stderr_file_path)
     end
