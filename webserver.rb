@@ -7,6 +7,7 @@ require 'base64'
 require 'digest/md5'
 require_relative 'blacklist_checker' 
 require_relative 'command_logger'
+require_relative 'command_cache '
 
 class Server < WEBrick::HTTPServlet::AbstractServlet
   # Define a global command timeout in seconds
@@ -49,28 +50,15 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
     end
 
     @logger.info "Executing command: #{command}"  
-    md5_hash = Digest::MD5.hexdigest(command)
-    cache_path = File.join('command_cache', md5_hash)
     
-    @logger.info "Checking cache for response: #{cache_path}"
-  
-    if File.exist?(cache_path)
-      @logger.info "Cache hit: #{cache_path}"
-      cached_data = File.read(cache_path).split("\n\n", 2)
-      if cached_data.size == 2
-        @logger.info "Decoding cache response: #{cache_path}"
-        begin
-          cached_response_json = Base64.decode64(cached_data[1])
-          cached_response = JSON.parse(cached_response_json)
-          return format_response(cached_response['stdout'], cached_response['stderr'], cached_response['exit_code'], response)
-        rescue JSON::ParserError => e
-          @logger.error "Failed to parse JSON from cache: #{e.message}"
-        end
-      end
-    else
-      @logger.info "Cache miss: #{cache_path}"
+    cache = CommandCache.new
+    cached_response = cache.get(command)
+    if cached_response
+      @logger.info "Cache hit: Using cached response for command: #{command}"
+      format_response(cached_response['stdout'], cached_response['stderr'], cached_response['exit_code'], response)
+      return
     end
-  
+
     stdout_file_path = "/tmp/stdout_#{md5_hash}"
     stderr_file_path = "/tmp/stderr_#{md5_hash}"
     File.write(stdout_file_path, "") # Ensure file is created
@@ -96,12 +84,10 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
       format_response(stdout, stderr, exit_code, response)
   
       if response.status == 200
-        @logger.info "Saving command cache command: #{command}"
-        @logger.info "Saving cache in: #{cache_path}"
-
-        cache_content = Base64.encode64(command) + "\n" + Base64.encode64(response.body)
-        File.write(cache_path, cache_content)
+        @logger.info "Caching response for command: #{command}"
+        cache.set(command, response.body)
       end
+      
     rescue Timeout::Error
       Process.kill('TERM', pid)
       Process.wait(pid)
