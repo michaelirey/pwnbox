@@ -6,7 +6,7 @@ require 'fileutils'
 require 'base64'
 require 'digest/md5'
 require_relative 'blacklist_checker' 
-require_relative 'command_normalizer'
+require_relative 'command_logger'
 
 class Server < WEBrick::HTTPServlet::AbstractServlet
   # Define a global command timeout in seconds
