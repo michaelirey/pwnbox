@@ -6,7 +6,6 @@ class CommandExecutor
   def execute(command)
     stdout_file, stderr_file = create_temp_files(command)
     begin
-      Dir.chdir("/root")
       pid = spawn_command(command, stdout_file, stderr_file)
       wait_for_process(pid)
 
@@ -30,7 +29,7 @@ class CommandExecutor
 
   def spawn_command(command, stdout_file, stderr_file)
     full_command = "#{command} 2>&1 | tee #{stdout_file.path}"
-    Process.spawn(full_command, out: stdout_file, err: stderr_file)
+    Process.spawn(command, chdir: "/root", out: stdout_file, err: stderr_file)
   end
 
   def wait_for_process(pid)
