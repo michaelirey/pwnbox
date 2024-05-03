@@ -5,6 +5,7 @@ require 'logger'
 require 'fileutils'
 require 'base64'
 require 'digest/md5'
+require_relative '../blacklist_checker' # Update the path accordingly
 
 
 class Server < WEBrick::HTTPServlet::AbstractServlet
@@ -44,12 +45,13 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
   private
   
   def execute_command(command, response)
-    if command_blacklisted?(command)
+    blacklist_checker = BlacklistChecker.new
+    if blacklist_checker.blacklisted?(command)
       log_command_execution(command, true)
       format_blacklist_response(command, response)
       return
     end
-    
+
     log_command_execution(command, false)
   
     md5_hash = Digest::MD5.hexdigest(command)
@@ -137,13 +139,13 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
     end
   end
 
-  def normalize_command(command)
-    ip_regex = /\b\d{1,3}(\.\d{1,3}){3}\b/
-    hostname_regex = /\b[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b/
+  # def normalize_command(command)
+  #   ip_regex = /\b\d{1,3}(\.\d{1,3}){3}\b/
+  #   hostname_regex = /\b[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b/
     
-    # Replace IPs and hostnames with <hostname>
-    command.gsub(ip_regex, '<hostname>').gsub(hostname_regex, '<hostname>')
-  end
+  #   # Replace IPs and hostnames with <hostname>
+  #   command.gsub(ip_regex, '<hostname>').gsub(hostname_regex, '<hostname>')
+  # end
 
   def format_response(stdout, stderr, exit_code, response)
     response_dict = {
@@ -195,14 +197,14 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
     response.body = JSON.generate(response_dict)
   end
 
-  def load_blacklist
-    blacklist_path = 'blacklist.txt'
-    if File.exist?(blacklist_path)
-      File.readlines(blacklist_path).map(&:strip).reject { |line| line.start_with?('#') || line.empty? }
-    else
-      []
-    end
-  end
+  # def load_blacklist
+  #   blacklist_path = 'blacklist.txt'
+  #   if File.exist?(blacklist_path)
+  #     File.readlines(blacklist_path).map(&:strip).reject { |line| line.start_with?('#') || line.empty? }
+  #   else
+  #     []
+  #   end
+  # end
     
   def command_blacklisted?(command)
     normalized_command = normalize_command(command.strip)

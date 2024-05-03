@@ -5,7 +5,7 @@ require 'json'
 describe 'Server' do
   let(:url) { ENV['NGROK_PROXY'] }
 
-  it 'executes a command that is not blacklisted' do
+  it 'executes a non-blacklisted command with "date"' do
     uri = URI("#{url}/command")
     res = Net::HTTP.post(uri, 'date')
     expect(res.code).to eq "200"
@@ -13,7 +13,7 @@ describe 'Server' do
     expect(response_body['stdout']).not_to be_empty
   end
 
-  it 'executes a command that is not blacklisted' do
+  it 'executes a non-blacklisted command with "ftp -h"' do
     uri = URI("#{url}/command")
     res = Net::HTTP.post(uri, 'ftp -h')
     expect(res.code).to eq "200"
@@ -41,9 +41,6 @@ describe 'Server' do
     expect(res2.code).to eq "200"
     response_body2 = JSON.parse(res2.body)
 
-
     expect(response_body1['stdout']).to eq(response_body2['stdout'])
   end
-
-
 end
