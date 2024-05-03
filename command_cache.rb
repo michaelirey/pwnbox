@@ -41,8 +41,8 @@ class CommandCache
   end
 
   def parse_cached_response(cached_response_json)
-    Base64.decode64(cached_response_json)
-    JSON.parse(cached_response_json)
+    decoded_json = Base64.decode64(cached_response_json)
+    JSON.parse(decoded_json)
   rescue JSON::ParserError => e
     raise CacheReadError.new("Failed to parse JSON from cache: #{e.message}")
   end
