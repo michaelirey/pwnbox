@@ -3,6 +3,11 @@
 echo -e "### System Report\n"
 
 # OS and Version
+user_info=$(whoami)
+echo "#### Current user"
+echo "- **User**: $user_info"
+
+# OS and Version
 os_info=$(cat /etc/os-release | grep PRETTY_NAME | cut -d '=' -f2)
 echo "#### OS and Version"
 echo "- **OS**: $os_info"
