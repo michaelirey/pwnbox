@@ -12,7 +12,7 @@ require_relative 'command_executor'
 
 class Server < WEBrick::HTTPServlet::AbstractServlet
   # Define a global command timeout in seconds
-  COMMAND_TIMEOUT = 60
+  COMMAND_TIMEOUT = 10
 
   def initialize(server)
     super
@@ -125,7 +125,7 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
       'status' => 'fail',
       'suggestion' => "Consider modifying your command or increasing the timeout setting if consistently necessary."
     }
-    response.status = 500
+    response.status = 504
     response['Content-Type'] = 'application/json'
     response.body = JSON.generate(response_dict)
   end
