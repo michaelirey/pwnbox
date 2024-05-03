@@ -49,7 +49,7 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
       format_blacklist_response(command, response)
       return
     end
-
+    
     log_command_execution(command, false)
   
     md5_hash = Digest::MD5.hexdigest(command)
