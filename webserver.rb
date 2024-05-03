@@ -214,7 +214,7 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
   
 end
 
-server = WEBrick::HTTPServer.new(Port: 8000)
+server = WEBrick::HTTPServer.new(Port: 1977)
 server.mount('/', Server)
 trap('INT') { server.shutdown }
 server.start
