@@ -18,16 +18,16 @@ echo "### An initial basic port scan of the $target"
 # Perform a quick ping test
 echo -e "\n#### Perform a quick ping test"
 echo "\`\`\`"
-echo "% ping -c 10 $target"
-ping -c 10 $target
+echo "% ping -c 5 $target"
+ping -c 5 $target
 echo "\`\`\`"
 
 # Perform traceroute
-echo -e "\n#### Perform traceroute"
-echo "\`\`\`"
-echo "% traceroute $target"
-traceroute $target
-echo "\`\`\`"
+# echo -e "\n#### Perform traceroute"
+# echo "\`\`\`"
+# echo "% traceroute $target"
+# traceroute $target
+# echo "\`\`\`"
 
 # Perform Nmap version scan with no ping (to ensure scan runs even if host blocks pings)
 echo -e "\n#### Perform Nmap version scan with no ping (to ensure scan runs even if host blocks pings)"
