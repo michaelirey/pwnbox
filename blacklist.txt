@@ -3,3 +3,6 @@ telnet <hostname>
 telnet <hostname> 23
 telnet-ssl <hostname> 23
 ftp <hostname>
+ftp <hostname>
+smbclient -L <hostname>
+smbclient -L //<hostname>
