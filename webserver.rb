@@ -8,6 +8,7 @@ require 'digest/md5'
 require_relative 'blacklist_checker' 
 require_relative 'command_logger'
 require_relative 'command_cache'
+require_relative 'command_executor'
 
 class Server < WEBrick::HTTPServlet::AbstractServlet
   # Define a global command timeout in seconds
@@ -49,8 +50,8 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
       return
     end
 
-    @logger.info "Executing command: #{command}"  
-    
+    @logger.info "Executing command: #{command}"
+
     cache = CommandCache.new
     cached_response = cache.get(command)
     if cached_response
@@ -58,56 +59,24 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
       format_response(cached_response['stdout'], cached_response['stderr'], cached_response['exit_code'], response)
       return
     end
-
-    md5_hash = cache.md5_for(command)
-
-    stdout_file_path = "/tmp/stdout_#{md5_hash}"
-    stderr_file_path = "/tmp/stderr_#{md5_hash}"
-    File.write(stdout_file_path, "") # Ensure file is created
-    File.write(stderr_file_path, "")
   
-    out_file = File.open(stdout_file_path, 'w+')
-    err_file = File.open(stderr_file_path, 'w+')
-  
+    executor = CommandExecutor.new
     begin
-      # Use shell to handle redirection
-      full_command = "#{command} 2>&1 | tee #{stdout_file_path}"
-      pid = Process.spawn(full_command, out: out_file, err: err_file)
-      Timeout.timeout(COMMAND_TIMEOUT) do
-        Process.wait(pid)
-      end
-  
-      out_file.rewind
-      err_file.rewind
-      stdout = out_file.read
-      stderr = err_file.read
-      exit_code = $?.exitstatus
-
-      format_response(stdout, stderr, exit_code, response)
-  
-      if response.status == 200
-        @logger.info "Caching response for command: #{command}"
-        cache.set(command, response.body)
-      end
-
-    rescue Timeout::Error
-      Process.kill('TERM', pid)
-      Process.wait(pid)
-      @logger.warn "Command timeout: #{command}"
-      stdout = File.read(stdout_file_path) rescue ""
-      stderr = File.read(stderr_file_path) rescue ""
-      format_timeout_response(response, command, stdout, stderr)
+      result = executor.execute(command)
+      format_response(result.stdout, result.stderr, result.exit_code, response)
+    rescue CommandTimeoutError => e
+      format_timeout_response(response, command, e.stdout, e.stderr)
     rescue => e
       @logger.error "Exception caught: #{e.message}"
       format_error_response(e, response)
-    ensure
-      out_file.close
-      err_file.close
-      File.delete(stdout_file_path) if File.exist?(stdout_file_path)
-      File.delete(stderr_file_path) if File.exist?(stderr_file_path)
+    end
+  
+    if response.status == 200
+      @logger.info "Caching response for command: #{command}"
+      cache.set(command, response.body)
     end
   end
-                
+                  
   def execute_script(request, response)
     request_body = JSON.parse(request.body)
     file_contents = request_body['file_contents']
