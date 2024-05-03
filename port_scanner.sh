@@ -32,8 +32,8 @@ echo "\`\`\`"
 # Perform Nmap version scan with no ping (to ensure scan runs even if host blocks pings)
 echo -e "\n#### Perform Nmap version scan with no ping (to ensure scan runs even if host blocks pings)"
 echo "\`\`\`"
-echo "% nmap -sV -Pn $target"
-nmap -sV -Pn $target | tee "$results_file"
+echo "% nmap -sV -Pn $target -p 80,5985"
+nmap -sV -Pn $target -p 80,5985 | tee "$results_file"
 echo "\`\`\`"
 
 # # Extract and display open ports from the results
