@@ -6,3 +6,4 @@ ftp <hostname>
 ftp <hostname>
 smbclient -L <hostname>
 smbclient -L //<hostname>
+smbclient //<hostname>/SHARENAME -U ' ' -c 'get flag.txt'
