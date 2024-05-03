@@ -49,7 +49,7 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
       format_blacklist_response(command, response)
       return
     end
-  
+
     log_command_execution(command, false)
   
     md5_hash = Digest::MD5.hexdigest(command)
@@ -138,14 +138,12 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
   end
 
   def normalize_command(command)
-    # Regex to identify IP addresses and hostnames
-    ip_regex = /\b(?:\d{1,3}\.){3}\d{1,3}\b/
+    ip_regex = /\b\d{1,3}(\.\d{1,3}){3}\b/
     hostname_regex = /\b[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b/
     
     # Replace IPs and hostnames with <hostname>
     command.gsub(ip_regex, '<hostname>').gsub(hostname_regex, '<hostname>')
   end
-  
 
   def format_response(stdout, stderr, exit_code, response)
     response_dict = {
