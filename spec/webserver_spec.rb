@@ -3,7 +3,7 @@ require 'uri'
 require 'json'
 
 describe 'Server' do
-  let(:url) { 'https://d5d0-209-151-151-152.ngrok-free.app' }
+  let(:url) { ENV['NGROK_PROXY'] }
 
   it 'executes a command that is not blacklisted' do
     uri = URI("#{url}/command")

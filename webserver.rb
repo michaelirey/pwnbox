@@ -137,6 +137,16 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
     end
   end
 
+  def normalize_command(command)
+    # Regex to identify IP addresses and hostnames
+    ip_regex = /\b(?:\d{1,3}\.){3}\d{1,3}\b/
+    hostname_regex = /\b[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b/
+    
+    # Replace IPs and hostnames with <hostname>
+    command.gsub(ip_regex, '<hostname>').gsub(hostname_regex, '<hostname>')
+  end
+  
+
   def format_response(stdout, stderr, exit_code, response)
     response_dict = {
       'stdout' => stdout,
@@ -189,25 +199,17 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
 
   def load_blacklist
     blacklist_path = 'blacklist.txt'
-    File.exist?(blacklist_path) ? File.readlines(blacklist_path).map(&:strip) : []
-  end
-  
-  def command_blacklisted?(command)
-    # Sanitize the command by removing outputs piped from it
-    sanitized_command = command.gsub(/<<.*$/, '').strip
-  
-    # Split the command into parts for structured matching
-    command_parts = sanitized_command.split
-  
-    # Iterate over each blacklisted command pattern
-    @blacklist.any? do |bl_command|
-      bl_parts = bl_command.split
-      # Check if the initial parts of the command match the blacklisted command parts
-      next false if bl_parts.size > command_parts.size
-      bl_parts.each_with_index.all? { |part, index| part == command_parts[index] }
+    if File.exist?(blacklist_path)
+      File.readlines(blacklist_path).map(&:strip).reject { |line| line.start_with?('#') || line.empty? }
+    else
+      []
     end
   end
-  
+    
+  def command_blacklisted?(command)
+    normalized_command = normalize_command(command.strip)
+    @blacklist.include?(normalized_command)
+  end
 
   def log_command_execution(command, blacklisted)
     if blacklisted
@@ -216,7 +218,6 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
       @logger.info "Executing command: #{command}"
     end
   end
-  
 end
 
 server = WEBrick::HTTPServer.new(Port: 1977)
