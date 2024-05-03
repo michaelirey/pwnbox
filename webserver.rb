@@ -5,8 +5,8 @@ require 'logger'
 require 'fileutils'
 require 'base64'
 require 'digest/md5'
-require_relative 'blacklist_checker' # Update the path accordingly
-
+require_relative 'blacklist_checker' 
+require_relative 'command_normalizer'
 
 class Server < WEBrick::HTTPServlet::AbstractServlet
   # Define a global command timeout in seconds
@@ -14,10 +14,7 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
 
   def initialize(server)
     super
-    @logger = Logger.new('server_log.log', 10, 1024000)
-    @logger.formatter = proc do |severity, datetime, progname, msg|
-      "#{datetime}: #{severity} - #{msg}\n"
-    end
+    @logger = CommandLogger.new
     @logger.info "Server started"
 
     # Ensure command cache directory exists
@@ -46,13 +43,12 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
   def execute_command(command, response)
     blacklist_checker = BlacklistChecker.new
     if blacklist_checker.blacklisted?(command)
-      log_command_execution(command, true)
+      @logger.warn "Blocked blacklisted command: #{command}"
       format_blacklist_response(command, response)
       return
     end
 
-    log_command_execution(command, false)
-  
+    @logger.info "Executing command: #{command}"  
     md5_hash = Digest::MD5.hexdigest(command)
     cache_path = File.join('command_cache', md5_hash)
     
@@ -138,14 +134,6 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
     end
   end
 
-  # def normalize_command(command)
-  #   ip_regex = /\b\d{1,3}(\.\d{1,3}){3}\b/
-  #   hostname_regex = /\b[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b/
-    
-  #   # Replace IPs and hostnames with <hostname>
-  #   command.gsub(ip_regex, '<hostname>').gsub(hostname_regex, '<hostname>')
-  # end
-
   def format_response(stdout, stderr, exit_code, response)
     response_dict = {
       'stdout' => stdout,
@@ -196,26 +184,9 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
     response.body = JSON.generate(response_dict)
   end
 
-  # def load_blacklist
-  #   blacklist_path = 'blacklist.txt'
-  #   if File.exist?(blacklist_path)
-  #     File.readlines(blacklist_path).map(&:strip).reject { |line| line.start_with?('#') || line.empty? }
-  #   else
-  #     []
-  #   end
-  # end
-    
   def command_blacklisted?(command)
     normalized_command = normalize_command(command.strip)
     @blacklist.include?(normalized_command)
-  end
-
-  def log_command_execution(command, blacklisted)
-    if blacklisted
-      @logger.warn "Blocked blacklisted command: #{command}"
-    else
-      @logger.info "Executing command: #{command}"
-    end
   end
 end
 
