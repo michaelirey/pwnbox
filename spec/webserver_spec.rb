@@ -11,7 +11,7 @@ describe 'Server' do
     expect(res.code).to eq "200"
     response_body = JSON.parse(res.body)
     expect(response_body).to include(
-      'stdout' => "muhfugga\n",
+      'stdout' => "root\n",
       'stderr' => "",
       'exit_code' => 0
     )
@@ -39,7 +39,7 @@ describe 'Server' do
       'attempted_command' => 'telnet 192.168.1.1',
       'server_error' => "Command not allowed and is blacklisted.",
       'status' => 'fail',
-      'suggestion' => "This may indicate the command is awaiting input, which is unsupported in this environment. Consider automating any required inputs or modifying the command to ensure it completes more rapidly or try scripting a solution. Otherwise, trying adjusting your command so it completes in a more timely manner." 
+      'suggestion' => "This may indicate the command is awaiting input, which is unsupported in this environment. But don't worry you can still achieve your goal without this command. Consider automating any required inputs or modifying the command to ensure it completes more rapidly or try scripting a solution. Otherwise, trying adjusting your command so it completes in a more timely manner." 
     )
   end
 

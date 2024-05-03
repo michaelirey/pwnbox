@@ -2,10 +2,11 @@ class CommandExecutor
   def initialize(timeout:)
     @timeout = timeout
   end
-  
+
   def execute(command)
     stdout_file, stderr_file = create_temp_files(command)
     begin
+      Dir.chdir("/root")
       pid = spawn_command(command, stdout_file, stderr_file)
       wait_for_process(pid)
 
