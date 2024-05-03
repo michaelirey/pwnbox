@@ -12,7 +12,7 @@ require_relative 'command_executor'
 
 class Server < WEBrick::HTTPServlet::AbstractServlet
   # Define a global command timeout in seconds
-  COMMAND_TIMEOUT = 10
+  COMMAND_TIMEOUT = 60
 
   def initialize(server)
     super
@@ -123,7 +123,7 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
       'exit_code' => -1,  # Indicative of a timeout
       'server_error' => "Command execution timed out after #{COMMAND_TIMEOUT} seconds.",
       'status' => 'fail',
-      'suggestion' => "Consider modifying your command or increasing the timeout setting if consistently necessary."
+      'suggestion' => "This may indicate the command is awaiting input, which is unsupported in this environment. Consider automating any required inputs or modifying the command to ensure it completes more rapidly or try scripting a solution. Otherwise, trying adjusting your command so it completes in a more timely manner."
     }
     response.status = 504
     response['Content-Type'] = 'application/json'
