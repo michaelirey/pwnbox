@@ -5,7 +5,7 @@ require 'logger'
 require 'fileutils'
 require 'base64'
 require 'digest/md5'
-require_relative '../blacklist_checker' # Update the path accordingly
+require_relative 'blacklist_checker' # Update the path accordingly
 
 
 class Server < WEBrick::HTTPServlet::AbstractServlet
