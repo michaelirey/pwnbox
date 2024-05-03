@@ -7,7 +7,7 @@ require 'base64'
 require 'digest/md5'
 require_relative 'blacklist_checker' 
 require_relative 'command_logger'
-require_relative 'command_cache '
+require_relative 'command_cache'
 
 class Server < WEBrick::HTTPServlet::AbstractServlet
   # Define a global command timeout in seconds
@@ -87,7 +87,7 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
         @logger.info "Caching response for command: #{command}"
         cache.set(command, response.body)
       end
-      
+
     rescue Timeout::Error
       Process.kill('TERM', pid)
       Process.wait(pid)
