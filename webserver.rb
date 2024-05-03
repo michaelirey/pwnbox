@@ -59,6 +59,8 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
       return
     end
 
+    md5_hash = cache.md5_for(command)
+
     stdout_file_path = "/tmp/stdout_#{md5_hash}"
     stderr_file_path = "/tmp/stderr_#{md5_hash}"
     File.write(stdout_file_path, "") # Ensure file is created

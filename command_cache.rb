@@ -4,6 +4,10 @@ class CommandCache
     FileUtils.mkdir_p(@cache_dir)
   end
 
+  def md5_for(command)
+    Digest::MD5.hexdigest(command)
+  end
+  
   def get(command)
     md5_hash = Digest::MD5.hexdigest(command)
     cache_path = File.join(@cache_dir, md5_hash)
