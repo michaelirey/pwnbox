@@ -19,8 +19,7 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
       "#{datetime}: #{severity} - #{msg}\n"
     end
     @logger.info "Server started"
-    @blacklist = load_blacklist
-  
+
     # Ensure command cache directory exists
     FileUtils.mkdir_p('command_cache')
   end
