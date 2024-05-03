@@ -4,7 +4,7 @@ class CommandExecutor
   end
 
   def execute(command)
-    stdout_file, stderr_file = create_temp_files
+    stdout_file, stderr_file = create_temp_files(command)
     begin
       pid = spawn_command(command, stdout_file, stderr_file)
       wait_for_process(pid)
@@ -20,7 +20,7 @@ class CommandExecutor
 
   private
 
-  def create_temp_files
+  def create_temp_files(command)
     md5_hash = Digest::MD5.hexdigest(command)
     stdout_file = Tempfile.new(["stdout", ".#{md5_hash}"])
     stderr_file = Tempfile.new(["stderr", ".#{md5_hash}"])
