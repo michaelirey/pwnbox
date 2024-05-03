@@ -12,21 +12,19 @@ class CommandCache
 
   def get(command)
     cache_path = cache_path_for(command)
-    if File.exist?(cache_path)
-      cached_data = File.read(cache_path).split("\n\n", 2)
-      if cached_data.size == 2
-        begin
-          cached_response_json = Base64.decode64(cached_data[1])
-          JSON.parse(cached_response_json)
-        rescue JSON::ParserError => e
-          raise CacheReadError.new("Failed to parse JSON from cache: #{e.message}")
-        end
-      end
-    else
-      nil
+    return nil unless File.exist?(cache_path)
+  
+    cached_data = File.read(cache_path).split("\n\n", 2)
+    return nil unless cached_data.size == 2
+  
+    begin
+      cached_response_json = Base64.decode64(cached_data[1])
+      JSON.parse(cached_response_json)
+    rescue JSON::ParserError => e
+      raise CacheReadError.new("Failed to parse JSON from cache: #{e.message}")
     end
   end
-
+  
   def set(command, response_body)
     cache_path = cache_path_for(command)
     cache_content = Base64.encode64(command) + "\n" + Base64.encode64(response_body)
