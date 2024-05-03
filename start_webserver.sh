@@ -1,5 +1,5 @@
 NGROK_URL=$(curl --silent http://127.0.0.1:4040/api/tunnels | jq -r '.tunnels[0].public_url')
-echo "Make note of this url:"
+echo -e "Make note of this url:\n"
 echo ${NGROK_URL}
-echo "\n\n"
+echo -e "\n\n"
 cd ~/pwnbox && ruby webserver.rb
