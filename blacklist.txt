@@ -3,7 +3,7 @@ telnet <hostname>
 telnet <hostname> 23
 telnet-ssl <hostname> 23
 ftp <hostname>
-ftp <hostname>
+ftp <hostname> 21
 smbclient -L <hostname>
 smbclient -L //<hostname>
 smbclient //<hostname>/SHARENAME -U ' ' -c 'get flag.txt'
