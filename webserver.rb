@@ -52,13 +52,13 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
 
     @logger.info "Executing command: #{command}"
 
-    cache = CommandCache.new
-    cached_response = cache.get(command)
-    if cached_response
-      @logger.info "Cache hit: Using cached response for command: #{command}"
-      format_response(cached_response['stdout'], cached_response['stderr'], cached_response['exit_code'], response)
-      return
-    end
+    # cache = CommandCache.new
+    # cached_response = cache.get(command)
+    # if cached_response
+    #   @logger.info "Cache hit: Using cached response for command: #{command}"
+    #   format_response(cached_response['stdout'], cached_response['stderr'], cached_response['exit_code'], response)
+    #   return
+    # end
   
     executor = CommandExecutor.new(timeout: COMMAND_TIMEOUT)
     begin
