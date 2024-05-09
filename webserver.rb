@@ -72,8 +72,8 @@ class Server < WEBrick::HTTPServlet::AbstractServlet
     end
   
     if response.status == 200
-      @logger.info "Caching response for command: #{command}"
-      cache.set(command, response.body)
+      # @logger.info "Caching response for command: #{command}"
+      # cache.set(command, response.body)
     end
   end
                   
