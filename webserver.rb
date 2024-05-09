@@ -12,7 +12,7 @@ require_relative 'command_executor'
 
 class Server < WEBrick::HTTPServlet::AbstractServlet
   # Define a global command timeout in seconds
-  COMMAND_TIMEOUT = 90
+  COMMAND_TIMEOUT = 30
 
   def initialize(server)
     super
